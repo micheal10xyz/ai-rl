@@ -22,24 +22,6 @@ ref_model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
-messages = [
-    {
-        "role": "system",
-        "content": "Give me a short introduction to large language model."
-    },
-    {
-        "role": "user",
-        "content": "hello world"
-    }
-]
-
-input_text = tokenizer.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True,
-    enable_thinking=False,
-)
-
 rl_dataset = datasets.load_dataset("json", data_files="helpful_base_cn_train.jsonl")
 
 
@@ -69,19 +51,20 @@ def pre_process(example):
     }
 
 train_dataset = rl_dataset["train"].map(pre_process)
+train_dataset = train_dataset.select(range(100))
 
 dpo_config = DPOConfig(
     output_dir="./qwen3-dpo",
-    per_device_train_batch_size=2,
+    per_device_train_batch_size=1,
     gradient_accumulation_steps=8,
     learning_rate=5e-6,
     num_train_epochs=3,
-    beta=0.1,
+    beta=0.2,
     logging_steps=10,
-    save_steps=100,
+    save_steps=10,
     bf16=True,
-    max_length=2048,
-    max_prompt_length=512,
+    max_length=1024,
+    max_prompt_length=256,
     report_to="none"
 )
 
