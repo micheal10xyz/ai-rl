@@ -10,7 +10,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     trust_remote_code=True,
-    dtype=torch.bfloat16,
+    dtype=torch.float16,
     device_map="auto"
 )
 
@@ -18,7 +18,7 @@ model = AutoModelForCausalLM.from_pretrained(
 ref_model = AutoModelForCausalLM.from_pretrained(
     model_name,
     trust_remote_code=True,
-    dtype=torch.bfloat16,
+    dtype=torch.float16,
     device_map="auto"
 )
 
@@ -52,34 +52,9 @@ def pre_process(example):
 
 train_dataset = rl_dataset["train"].map(pre_process)
 train_dataset = train_dataset.select(range(100))
+training_args = DPOConfig(output_dir="qwen3-dpo")
+trainer = DPOTrainer(model=model, args=training_args, processing_class=tokenizer, train_dataset=train_dataset)
 
-dpo_config = DPOConfig(
-    output_dir="./qwen3-dpo",
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,
-    learning_rate=5e-6,
-    num_train_epochs=3,
-    beta=0.2,
-    logging_steps=10,
-    save_steps=10,
-    bf16=True,
-    max_length=1024,
-    max_prompt_length=256,
-    report_to="none"
-)
-
-trainer = DPOTrainer(
-    model=model,
-    ref_model=ref_model,
-    args=dpo_config,
-    train_dataset=train_dataset,
-    #tokenizer=tokenizer,
-)
 
 trainer.train()
 trainer.save_model()
-
-
-
-
-
